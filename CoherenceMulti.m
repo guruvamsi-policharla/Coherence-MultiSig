@@ -1,6 +1,6 @@
 %Version 1.00 
 %**************************************************************************
-%***************************** Coherence GUI ******************************
+%***************************** CoherenceMulti GUI ******************************
 %**************************************************************************
 %---------------------------Credits----------------------------------------
 %Wavelet Transform: Dmytro Iatsenko
@@ -9,22 +9,22 @@
 
 
 
-function varargout = Coherence(varargin)
-% COHERENCE MATLAB code for Coherence.fig
-%      COHERENCE, by itself, creates a new COHERENCE or raises the existing
+function varargout = CoherenceMulti(varargin)
+% COHERENCEMULTI MATLAB code for CoherenceMulti.fig
+%      COHERENCEMULTI, by itself, creates a new COHERENCEMULTI or raises the existing
 %      singleton*.
 %
-%      H = COHERENCE returns the handle to a new COHERENCE or the handle to
+%      H = COHERENCEMULTI returns the handle to a new COHERENCEMULTI or the handle to
 %      the existing singleton*.
 %
-%      COHERENCE('CALLBACK',hObject,eventData,handles,...) calls the local
-%      function named CALLBACK in COHERENCE.M with the given input arguments.
+%      COHERENCEMULTI('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in COHERENCEMULTI.M with the given input arguments.
 %
-%      COHERENCE('Property','Value',...) creates a new COHERENCE or raises the
+%      COHERENCEMULTI('Property','Value',...) creates a new COHERENCEMULTI or raises the
 %      existing singleton*.  Starting from the left, property value pairs are
-%      applied to the GUI before Coherence_OpeningFcn gets called.  An
+%      applied to the GUI before CoherenceMulti_OpeningFcn gets called.  An
 %      unrecognized property name or invalid value makes property application
-%      stop.  All inputs are passed to Coherence_OpeningFcn via varargin.
+%      stop.  All inputs are passed to CoherenceMulti_OpeningFcn via varargin.
 %
 %      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
 %      instance to run (singleton)".
@@ -32,9 +32,9 @@ function varargout = Coherence(varargin)
 % See also: GUIDE, GUIDATA, GUIHANDLES
 
 
-% Edit the above text to modify the response to help Coherence
+% Edit the above text to modify the response to help CoherenceMulti
 
-% Last Modified by GUIDE v2.5 29-Jun-2017 20:40:05
+% Last Modified by GUIDE v2.5 03-Jul-2017 17:59:05
 %*************************************************************************%
 %                BEGIN initialization code - DO NOT EDIT                  %
 %                ----------------------------------------                 %
@@ -42,8 +42,8 @@ function varargout = Coherence(varargin)
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
                    'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @Coherence_OpeningFcn, ...
-                   'gui_OutputFcn',  @Coherence_OutputFcn, ...
+                   'gui_OpeningFcn', @CoherenceMulti_OpeningFcn, ...
+                   'gui_OutputFcn',  @CoherenceMulti_OutputFcn, ...
                    'gui_LayoutFcn',  [] , ...
                    'gui_Callback',   []);
 if nargin && ischar(varargin{1})
@@ -60,7 +60,7 @@ end
 %*************************************************************************%
 
 
-function Coherence_OpeningFcn(hObject, eventdata, handles, varargin)
+function CoherenceMulti_OpeningFcn(hObject, eventdata, handles, varargin)
 
 movegui('center') 
 axes(handles.logo)
@@ -76,7 +76,7 @@ drawnow;
 
 handles.output = hObject;
 guidata(hObject, handles);
-function varargout = Coherence_OutputFcn(hObject, eventdata, handles) 
+function varargout = CoherenceMulti_OutputFcn(hObject, eventdata, handles) 
 varargout{1} = handles.output;
 function plot_type_CreateFcn(hObject, eventdata, handles)
 function wavlet_transform_CreateFcn(hObject, eventdata, handles)
