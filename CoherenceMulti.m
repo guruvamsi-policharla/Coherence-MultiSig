@@ -34,7 +34,7 @@ function varargout = CoherenceMulti(varargin)
 
 % Edit the above text to modify the response to help CoherenceMulti
 
-% Last Modified by GUIDE v2.5 03-Jul-2017 17:59:05
+% Last Modified by GUIDE v2.5 10-Jul-2017 17:43:00
 %*************************************************************************%
 %                BEGIN initialization code - DO NOT EDIT                  %
 %                ----------------------------------------                 %
@@ -68,9 +68,9 @@ matlabImage = imread('physicslogo.png');
 image(matlabImage)
 axis off
 axis image
-h = findall(0,'Type','uicontrol');
-set(h,'FontUnits','normalized');
-handles.calc_type = 1;
+%h = findall(0,'Type','uicontrol');
+%set(h,'FontUnits','normalized');
+%handles.calc_type = 1;
 guidata(hObject,handles);
 drawnow;
 
@@ -146,11 +146,6 @@ function cutedges_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-function sampling_rate_CreateFcn(hObject, eventdata, handles)
-
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
 function length_Callback(hObject, eventdata, handles)
 function length_CreateFcn(hObject, eventdata, handles)
 
@@ -197,20 +192,29 @@ set(handles.status,'String',msg);
 drawnow;
 %--------------------------------------------------------------------------
 
-function sampling_rate_Callback(hObject, eventdata, handles)
-%Replots after changin sampling rate
-   % display_selected(hObject, eventdata, handles);
-
 function intervals_Callback(hObject, eventdata, handles)
 %Marking lines on the graphs    
     intervals = csv_to_mvar(get(handles.intervals,'String'));    
-    
+    child_handles = allchild(handles.wt_pane);            
+    for i = 1:size(child_handles,1)        
+        if(strcmp(get(child_handles(i),'Type'),'axes'))
+            axes_child = allchild(child_handles(i));
+            for j = 1:size(axes_child,1)
+                if strcmpi(get(axes_child(j),'Type'),'Line') 
+                    line_style = get(axes_child(j),'linestyle');
+                    line_width = get(axes_child(j),'linewidth');
+                    if strcmp(line_style,'--') && line_width == 1
+                        delete(axes_child(j)); 
+                    end
+                end
+            end
+        end
+    end 
+        
     if(size(intervals)>0)
-        zval = 1;
-        child_handles = allchild(handles.wt_pane);
-        for i = 1:size(child_handles,1)
-            
-            if(strcmp(get(child_handles(i),'Type'),'axes'))
+        zval = 1;        
+        for i = 1:size(child_handles,1)            
+            if(strcmp(get(child_handles(i),'Type'),'axes') && strcmp(get(child_handles(i),'Visible'),'on'))
                 set(child_handles(i),'Ytick',intervals);
                 hold(child_handles(i),'on');
                 warning('off');
@@ -226,61 +230,10 @@ function intervals_Callback(hObject, eventdata, handles)
                 
                 warning('on');
                 hold(child_handles(i),'off');
-            end
-            
-        end
+            end            
+        end    
     end
-    
-    
-% function preprocess_Callback(hObject, eventdata, handles)
-% %Detrending Part Visualisation
-%     cla(handles.plot_pp,'reset');
-%     data = guidata(hObject);
-%     sig = data.sig; 
-%     time_axis = data.time_axis;
-%     L = size(sig,2);
-%     fs = str2double(get(handles.sampling_freq,'String'));
-%     fmax = str2double(get(handles.max_freq,'String'));
-%     fmin = str2double(get(handles.min_freq,'String'));
-%     
-%     contents = cellstr(get(handles.detrend_signal_popup,'String'));
-%     i = contents{get(handles.detrend_signal_popup,'Value')};
-%     i = str2double(i);
-%     
-%     %Detrending
-%     cur_sig = sig(i,:);
-%     cur_sig = cur_sig(:);
-%     X=(1:length(cur_sig))'/fs; XM=ones(length(X),4); 
-% 
-%     for pn=1:3 
-%         CX=X.^pn; 
-%         XM(:,pn+1)=(CX-mean(CX))/std(CX); 
-%     end
-% 
-%     w=warning('off','all'); 
-%     new_signal=cur_sig-XM*(pinv(XM)*cur_sig); 
-%     warning(w);
-% 
-%     %Filtering
-%     fx=fft(new_signal,L); % Fourier transform of a signal
-% 
-%     Nq=ceil((L+1)/2); 
-%     ff=[(0:Nq-1),-fliplr(1:L-Nq)]*fs/L; 
-%     ff=ff(:); % frequencies in Fourier transform
-% 
-%     fx(abs(ff)<=max([fmin,fs/L]) | abs(ff)>=fmax)=0; % filter signal in a chosen frequency domain
-%     new_signal=ifft(fx);
-%     %Plotting
-%     
-%     plot(handles.plot_pp,time_axis,cur_sig);
-%     hold(handles.plot_pp,'on');
-%     plot(handles.plot_pp,time_axis,new_signal,'-r');
-%     
-%     
-%     %legend(handles.plot_pp,'Original','Pre-Processed','Location','Best');
-%     xlim(handles.plot_pp,[0,size(sig,2)./fs]);
-    
-%-------------------------------------------------------------------------    
+    set(handles.plot_pow,'Yticklabel',[]);
 
 function wavlet_transform_Callback(hObject, eventdata, handles)
 %Does the wavelet transform 
@@ -516,9 +469,7 @@ function wavlet_transform_Callback(hObject, eventdata, handles)
         end
 
         status_Callback(hObject, eventdata, handles, 'Finished calculating surrogates');
-    %-------------------------------------------------------------------------
-
-        %handles.TPC_surr_avg_arr = cell2mat(TPC_surr_avg_arr);
+    %-------------------------------------------------------------------------      
 
         surrogate_analysis = get(handles.surrogate_analysis,'Value');        
         handles.TPC_surr_avg_max = cell(size(handles.sig,1)/2,1);
@@ -547,20 +498,22 @@ function wavlet_transform_Callback(hObject, eventdata, handles)
 function xyplot_Callback(hObject, eventdata, handles)
 %Plots all figures
     signal_selected = get(handles.signal_list,'Value');  
+    cla(handles.plot3d,'reset');
+    cla(handles.plot_pow,'reset');
+    cla(handles.cum_avg,'reset');
     if any(signal_selected == size(handles.sig,1)/2+1) && isfield(handles,'freqarr')     
-        cla(handles.plot3d,'reset');
-        cla(handles.plot_pow,'reset');
-        cla(handles.cum_avg,'reset');
+        uistack(handles.plot_pow,'top');
+        uistack(handles.plot3d,'top');
         set(handles.plot3d,'visible','off');
         set(handles.plot_pow,'visible','off');   
         set(handles.cum_avg,'visible','on');
         hold(handles.cum_avg,'on');
         if size(handles.sig,1)/2 > 1
-            plot(handles.cum_avg, handles.freqarr, mean(cell2mat(handles.time_avg_wpc)),'--','Linewidth',3);
-            plot(handles.cum_avg, handles.freqarr, median(cell2mat(handles.time_avg_wpc)),'-','Linewidth',3);
+            plot(handles.cum_avg, handles.freqarr, mean(cell2mat(handles.time_avg_wpc)),'-','Linewidth',3);
+            plot(handles.cum_avg, handles.freqarr, median(cell2mat(handles.time_avg_wpc)),'-*','Linewidth',3);
         else
-            plot(handles.cum_avg, handles.freqarr, cell2mat(handles.time_avg_wpc),'--','Linewidth',3);
             plot(handles.cum_avg, handles.freqarr, cell2mat(handles.time_avg_wpc),'-','Linewidth',3);
+            plot(handles.cum_avg, handles.freqarr, cell2mat(handles.time_avg_wpc),'--','Linewidth',3);
         end
         ylabel(handles.cum_avg,'Average Coherence');
         xlabel(handles.cum_avg,'Frequency (Hz)');
@@ -580,11 +533,8 @@ function xyplot_Callback(hObject, eventdata, handles)
         idx_first = find(sum(~isnan(handles.time_avg_wpc{1,1}),1) > 0, 1 ,'first');
         idx_last = find(sum(~isnan(handles.time_avg_wpc{1,1}),1) > 0, 1 , 'last');   
         xlim(handles.cum_avg,[handles.freqarr(idx_first) handles.freqarr(idx_last)]);
-        
+        grid(handles.cum_avg,'on');
     elseif isfield(handles,'freqarr') 
-        cla(handles.cum_avg,'reset');
-        cla(handles.plot3d,'reset');
-        cla(handles.plot_pow,'reset');
         set(handles.cum_avg,'visible','off');
         set(handles.plot3d,'visible','on');
         set(handles.plot_pow,'visible','on');
@@ -593,100 +543,106 @@ function xyplot_Callback(hObject, eventdata, handles)
         pcolor(handles.plot3d, handles.time_axis_us , handles.freqarr, handles.TPC{signal_selected,1});                
         plot(handles.plot_pow, handles.time_avg_wpc{signal_selected,1}, handles.freqarr,'LineWidth',2);     
         hold(handles.plot_pow,'on');
-        if isfield(handles,'TPC_surr_avg_max')
-            plot(handles.plot_pow ,handles.TPC_surr_avg_max{signal_selected,1} , handles.freqarr,'LineWidth',2);
+        if isfield(handles,'TPC_surr_avg_max')            
             plot(handles.plot_pow,handles.TPC_surr_avg_max{signal_selected,1} , handles.freqarr,'LineWidth',2);
-            color_positive_breach(handles.plot_pow,handles.freqarr,handles.time_avg_wpc{signal_selected,1}, handles.TPC_surr_avg_max{signal_selected,1},'color','red','flipped');
+            color_positive_breach(handles.plot_pow,handles.freqarr,handles.time_avg_wpc{signal_selected,1}, ...
+                handles.TPC_surr_avg_max{signal_selected,1},'color','red','flipped');
+            leg = legend(handles.plot_pow,'Original Signal','Surrogate','Location','Best');
+            set(leg,'fontsize',8)%'Position',[0.7 0.04 0.05 0.05],
         end
         hold(handles.plot_pow,'off');
         xlabel(handles.plot_pow,'Average Coherence');       
         
-        c = colorbar(handles.plot3d,'Location','east');
-        set(c, 'position',[0.73 .12 .015 .85],'Linewidth',0.2);
-        set(c, 'fontsize',8,'units','normalized');
-        shading(handles.plot3d,'interp');       
-        set(handles.plot3d,'yscale','log');
-        set(handles.plot_pow,'yscale','log');        
-        set(handles.plot_pow,'yticklabel',[]);
-        set(handles.plot3d,'ylim',[min(handles.freqarr) max(handles.freqarr)]);%making the axes tight
-        set(handles.plot3d,'xlim',[handles.time_axis_us(1) handles.time_axis_us(end)]);%making the axes tight
+        
         xlabel(handles.plot3d,'Time (s)');
         ylabel(handles.plot3d,'Frequency (Hz)');    
         ylabel(handles.plot_pow,'Frequency (Hz)');    
-        ylim(handles.plot_pow,[min(handles.freqarr) max(handles.freqarr)]);
-        set(handles.status,'String','Done Plotting');
+        
+        c = colorbar(handles.plot3d,'Location','east');
+        set(c, 'position',[0.73 .12 .015 .85],'Linewidth',0.2,'fontsize',8,'units','normalized');
+        shading(handles.plot3d,'interp');       
+        set(handles.plot3d,'yscale','log');
+        set(handles.plot_pow,'yscale','log','yticklabel',[]);        
+        set(handles.plot3d,'ylim',[min(handles.freqarr) max(handles.freqarr)],...
+            'xlim',[handles.time_axis_us(1) handles.time_axis_us(end)]);%making the axes tight
+        
+        idx_first = find(sum(~isnan(handles.time_avg_wpc{signal_selected,1}),1) > 0, 1 ,'first');
+        idx_last = find(sum(~isnan(handles.time_avg_wpc{signal_selected,1}),1) > 0, 1 , 'last');      
+        ylim(handles.plot_pow,[handles.freqarr(idx_first) handles.freqarr(idx_last)]);
+        ylim(handles.plot3d,[handles.freqarr(idx_first) handles.freqarr(idx_last)]);
+        set(handles.status,'String','Done Plotting'); 
+        grid(handles.plot3d,'on');
+        grid(handles.plot_pow,'on');
     end
     
-    set(handles.plot3d,'Fontunits','normalized');
-    set(handles.plot_pow,'Fontunits','normalized');
-    set(handles.cum_avg,'Fontunits','normalized');
-    guidata(hObject,handles);
+    set(handles.plot3d,'Fontunits','normalized','fontsize',0.035);
+    set(handles.plot_pow,'Fontunits','normalized','fontsize',0.035);
+    set(handles.cum_avg,'Fontunits','normalized','fontsize',0.035);
+    %guidata(hObject,handles);
 
 %---------------------------Surrogate Analysis-----------------
 function surrogate_analysis_Callback(hObject, eventdata, handles)
 %To enable and disable the Percentile box
-
 surrogate_analysis = get(handles.surrogate_analysis,'Value');  
 if(surrogate_analysis == 2)
     set(handles.surrogate_percentile,'Enable','on');
-    surrogate_percentile = str2double(get(handles.surrogate_percentile,'String'));
-    handles.TPC_surr_avg_max = prctile(handles.TPC_surr_avg_arr,surrogate_percentile);
-    display('percentile');
 elseif(surrogate_analysis == 1)
     set(handles.surrogate_percentile,'Enable','off');
-    handles.TPC_surr_avg_max = max(handles.TPC_surr_avg_arr);
 end
 
 guidata(hObject,handles);
 subtract_surrogates_Callback(hObject, eventdata, handles)
 guidata(hObject,handles);
 
+%FIX THIS!!
 function surrogate_percentile_Callback(hObject, eventdata, handles)
-surrogate_analysis = get(handles.surrogate_analysis,'Value');  
-if(surrogate_analysis == 2)
-    set(handles.surrogate_percentile,'Enable','on');
-    surrogate_percentile = str2double(get(handles.surrogate_percentile,'String'));
-    handles.TPC_surr_avg_max = prctile(handles.TPC_surr_avg_arr,surrogate_percentile);
-    display('percentile');
-elseif(surrogate_analysis == 1)
-    set(handles.surrogate_percentile,'Enable','off');
-    handles.TPC_surr_avg_max = max(handles.TPC_surr_avg_arr);
-end
+set(handles.surrogate_percentile,'Enable','on');
+display('percentile');
 
 guidata(hObject,handles);
 subtract_surrogates_Callback(hObject, eventdata, handles)
 guidata(hObject,handles);
+
 
 function subtract_surrogates_Callback(hObject, eventdata, handles)
-display_selected = get(handles.display_type,'Value');
-if display_selected == 3 
-    toggle = get(handles.subtract_surrogates,'Value');
-    if toggle == get(handles.subtract_surrogates,'Max')
-        cla(handles.plot_pow,'reset');
-        corrected_coherence = handles.time_avg_wpc - handles.TPC_surr_avg_max;
-        corrected_coherence = subplus(corrected_coherence);
-        plot(handles.plot_pow ,corrected_coherence, handles.freqarr,'LineWidth',2);
-        set(handles.plot_pow,'yscale','log','yticklabel',[]);     
-        ylim(handles.plot_pow,[min(handles.freqarr) max(handles.freqarr)]);
-        xlabel(handles.plot_pow,{'Average Coherence','(Surrogate Subtracted)'});
-        %legend(handles.plot_pow,'Surrogate Subtracted','Location','Best');
-    else
-        cla(handles.plot_pow,'reset');
-        hold(handles.plot_pow,'on');
-        plot(handles.plot_pow ,handles.time_avg_wpc, handles.freqarr,'LineWidth',2);
-        if(size(handles.TPC_surr_avg_max)>0)
-            plot(handles.plot_pow ,handles.TPC_surr_avg_max , handles.freqarr,'LineWidth',2);
-        end
-        hold(handles.plot_pow,'off');     
-        set(handles.plot_pow,'yscale','log','yticklabel',[]);     
-        ylim(handles.plot_pow,[min(handles.freqarr) max(handles.freqarr)]);
-        color_positive_breach(handles.plot_pow,handles.freqarr,handles.time_avg_wpc, handles.TPC_surr_avg_max,'color','red','flipped');
-        set(handles.status,'String','Done Plotting');
-        xlabel(handles.plot_pow,'Average Coherence');   
-        %legend(handles.plot_pow,'Original Signal','Surrogate','Location','Best');
+signal_selected = get(handles.signal_list,'Value');
+toggle = get(handles.subtract_surrogates,'Value');
+if toggle == get(handles.subtract_surrogates,'Max')
+    cla(handles.plot_pow);
+    corrected_coherence = handles.time_avg_wpc{signal_selected,1} - handles.TPC_surr_avg_max{signal_selected,1};
+    corrected_coherence = subplus(corrected_coherence);
+    plot(handles.plot_pow ,corrected_coherence, handles.freqarr,'LineWidth',2);
+    set(handles.plot_pow,'yscale','log','yticklabel',[]);     
+    idx_first = find(sum(~isnan(handles.time_avg_wpc{signal_selected,1}),1) > 0, 1 ,'first');
+    idx_last = find(sum(~isnan(handles.time_avg_wpc{signal_selected,1}),1) > 0, 1 , 'last');      
+    ylim(handles.plot_pow,[handles.freqarr(idx_first) handles.freqarr(idx_last)]);
+    xlabel(handles.plot_pow,'Average Coherence');
+    ylabel(handles.plot_pow,'Frequency (Hz)'); 
+    leg = legend(handles.plot_pow,'Surrogate Subtracted','Location','Best');    
+    set(leg,'fontsize',8);
+else
+    cla(handles.plot_pow);
+    hold(handles.plot_pow,'on');
+    plot(handles.plot_pow ,handles.time_avg_wpc{signal_selected,1}, handles.freqarr,'LineWidth',2);
+    if(size(handles.TPC_surr_avg_max)>0)
+        plot(handles.plot_pow ,handles.TPC_surr_avg_max{signal_selected,1} , handles.freqarr,'LineWidth',2);
     end
-    
-end    
+    hold(handles.plot_pow,'off');     
+    set(handles.plot_pow,'yscale','log','yticklabel',[]);     
+    idx_first = find(sum(~isnan(handles.time_avg_wpc{signal_selected,1}),1) > 0, 1 ,'first');
+    idx_last = find(sum(~isnan(handles.time_avg_wpc{signal_selected,1}),1) > 0, 1 , 'last');      
+    ylim(handles.plot_pow,[handles.freqarr(idx_first) handles.freqarr(idx_last)]);
+    color_positive_breach(handles.plot_pow,handles.freqarr,handles.time_avg_wpc{signal_selected,1},...
+        handles.TPC_surr_avg_max{signal_selected,1},'color','red','flipped');
+    set(handles.status,'String','Done Plotting');
+    xlabel(handles.plot_pow,'Average Coherence');   
+    ylabel(handles.plot_pow,'Frequency (Hz)'); 
+    leg = legend(handles.plot_pow,'Original Signal','Surrogate','Location','Best');
+    set(leg,'fontsize',8);
+end
+grid(handles.plot_pow,'on');
+set(handles.plot_pow,'Fontunits','normalized','fontsize',0.035);
+      
 %---------------------------------------Surrogate Analysis------
 
 % --------------------------------------------------------------------
@@ -696,8 +652,11 @@ function file_Callback(hObject, eventdata, handles)
 % --------------------------------------------------------------------
 function csv_read_Callback(hObject, eventdata, handles)
 %Read csv file
+    cla(handles.time_series_1,'reset');
+    cla(handles.time_series_2,'reset');
     linkaxes([handles.time_series_1 handles.time_series_2],'x');
     set(handles.status,'String','Importing Signal...');
+    set(handles.signal_list,'Value',1);
     fs = str2double(get(handles.sampling_freq,'String'));     
     if isnan(fs)
       errordlg('Sampling frequency must be specified before importing','Parameter Error');
@@ -741,17 +700,22 @@ function csv_read_Callback(hObject, eventdata, handles)
     
     refresh_limits_Callback(hObject, eventdata, handles);%updates the values in the box
     guidata(hObject,handles);  
-    %cla(handles.plot_pp,'reset');
-    %preprocess_Callback(hObject, eventdata, handles);%plots the detrended curve
+    ylabel(handles.time_series_1,'Signal 1');
+    ylabel(handles.time_series_2,'Signal 2');
     xlabel(handles.time_series_2,'Time (s)');
     set(handles.status,'String','Select Data And Continue With Wavelet Transform');
     set(handles.signal_length,'String',strcat(num2str(size(sig,2)/fs/60),' minutes'));
+    set(handles.time_series_1,'fontunits','normalized','fontsize',0.237,'yticklabel',[],'xticklabel',[]);
+    set(handles.time_series_2,'fontunits','normalized','fontsize',0.237,'yticklabel',[]);    
 
 % --------------------------------------------------------------------
 function mat_read_Callback(hObject, eventdata, handles)
 %Read mat file    
+    cla(handles.time_series_1,'reset');
+    cla(handles.time_series_2,'reset');
     linkaxes([handles.time_series_1 handles.time_series_2],'x');
     set(handles.status,'String','Importing Signal...');
+    set(handles.signal_list,'Value',1);
     fs = str2double(get(handles.sampling_freq,'String'));   
     if isnan(fs)
       errordlg('Sampling frequency must be specified before importing','Parameter Error');
@@ -777,7 +741,6 @@ function mat_read_Callback(hObject, eventdata, handles)
     end
     list = cell(size(sig,1)/2+1,1);
     list{1,1} = 'Signal Pair 1';
-    i = 2;
     for i = 2:size(sig,1)/2
         list{i,1} = sprintf('Signal Pair %d',i);
     end
@@ -797,12 +760,14 @@ function mat_read_Callback(hObject, eventdata, handles)
     
     refresh_limits_Callback(hObject, eventdata, handles);%updates the values in the box
     guidata(hObject,handles);  
-    %cla(handles.plot_pp,'reset');
-    %preprocess_Callback(hObject, eventdata, handles);%plots the detrended curve
+    %0.237
+    ylabel(handles.time_series_1,'Signal 1');
+    ylabel(handles.time_series_2,'Signal 2');
     xlabel(handles.time_series_2,'Time (s)');
     set(handles.status,'String','Select Data And Continue With Wavelet Transform');
     set(handles.signal_length,'String',strcat(num2str(size(sig,2)/fs/60),' minutes'));
-
+    set(handles.time_series_1,'fontunits','normalized','fontsize',0.237,'yticklabel',[],'xticklabel',[]);
+    set(handles.time_series_2,'fontunits','normalized','fontsize',0.237,'yticklabel',[]);
     
 %---------------------------Limits-----------------------------
 function xlim_Callback(hObject, eventdata, handles)
@@ -886,15 +851,24 @@ function save_Callback(hObject, eventdata, handles)
 
 function save_3dplot_Callback(hObject, eventdata, handles)
 %Saves the 3d plot
-    Fig = figure;
-    copyobj(handles.plot3d, Fig);
-    Fig = tightfig(Fig);
+Fig = figure;
+ax = copyobj(handles.plot3d, Fig);
+set(ax,'Units', 'normalized', 'Position', [0.1,0.2,.85,.7]);
+set(Fig,'Units','normalized','Position', [0.2 0.2 0.5 0.5]);
 
 function save_power_plot_Callback(hObject, eventdata, handles)
 %Saves the power plot
-    Fig = figure;
-    copyobj(handles.plot_pow, Fig);
-    Fig = tightfig(Fig);
+Fig = figure;
+ax = copyobj(handles.plot_pow, Fig);
+view(90,-90);
+set(ax,'Units', 'normalized', 'Position', [0.1,0.2,.85,.7], 'YTickMode', 'auto', 'YTickLabelMode', 'auto');
+set(Fig,'Units','normalized','Position', [0.3 0.3 0.3 0.3]);
+
+function save_mm_plot_Callback(hObject, eventdata, handles)
+Fig = figure;
+ax = copyobj(handles.cum_avg, Fig);
+set(ax,'Units', 'normalized', 'Position', [0.1,0.2,.85,.7]);
+set(Fig,'Units','normalized','Position', [0.2 0.2 0.5 0.5]);
 
 function save_pow_arr_Callback(hObject, eventdata, handles)
 %Saves the avg power array
@@ -953,8 +927,17 @@ function signal_list_Callback(hObject, eventdata, handles)
             xyplot_Callback(hObject, eventdata, handles);
         end
         intervals_Callback(hObject, eventdata, handles)
-        
+        ylabel(handles.time_series_1,'Signal 1');
+        ylabel(handles.time_series_2,'Signal 2');
+        xlabel(handles.time_series_2,'Time (s)');
+        set(handles.time_series_1,'fontunits','normalized','fontsize',0.237,'yticklabel',[],'xticklabel',[]);
+        set(handles.time_series_2,'fontunits','normalized','fontsize',0.237,'yticklabel',[]);
     elseif any(signal_selected == size(handles.sig,1)/2+1)
         xyplot_Callback(hObject, eventdata, handles);
         intervals_Callback(hObject, eventdata, handles)
     end
+
+function display_type_Callback(hObject, eventdata, handles)
+% Hints: contents = cellstr(get(hObject,'String')) returns display_type contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from display_type
+
