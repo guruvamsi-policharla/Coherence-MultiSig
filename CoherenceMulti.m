@@ -34,7 +34,7 @@ function varargout = CoherenceMulti(varargin)
 
 % Edit the above text to modify the response to help CoherenceMulti
 
-% Last Modified by GUIDE v2.5 10-Jul-2017 17:43:00
+% Last Modified by GUIDE v2.5 12-Jul-2017 19:24:14
 %*************************************************************************%
 %                BEGIN initialization code - DO NOT EDIT                  %
 %                ----------------------------------------                 %
@@ -182,10 +182,11 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 function signal_list_CreateFcn(hObject, eventdata, handles)
-
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+function save_fig_Callback(hObject, eventdata, handles)
+
 %--------------------------------------------------Unused Callbacks--------
 function status_Callback(hObject, eventdata, handles, msg)
 set(handles.status,'String',msg);
@@ -194,7 +195,8 @@ drawnow;
 
 function intervals_Callback(hObject, eventdata, handles)
 %Marking lines on the graphs    
-    intervals = csv_to_mvar(get(handles.intervals,'String'));    
+    intervals = csv_to_mvar(get(handles.intervals,'String'));      
+    %Clearing unmarked lines
     child_handles = allchild(handles.wt_pane);            
     for i = 1:size(child_handles,1)        
         if(strcmp(get(child_handles(i),'Type'),'axes'))
@@ -203,36 +205,51 @@ function intervals_Callback(hObject, eventdata, handles)
                 if strcmpi(get(axes_child(j),'Type'),'Line') 
                     line_style = get(axes_child(j),'linestyle');
                     line_width = get(axes_child(j),'linewidth');
-                    if strcmp(line_style,'--') && line_width == 1
+                    if strcmp(line_style,'--') && line_width <= 1
                         delete(axes_child(j)); 
                     end
                 end
             end
+            set(child_handles(i),'Ytickmode','auto','Xtickmode','auto');            
         end
-    end 
-        
-    if(size(intervals)>0)
-        zval = 1;        
-        for i = 1:size(child_handles,1)            
-            if(strcmp(get(child_handles(i),'Type'),'axes') && strcmp(get(child_handles(i),'Visible'),'on'))
-                set(child_handles(i),'Ytick',intervals);
-                hold(child_handles(i),'on');
-                warning('off');
-                
-                for j = 1:size(intervals,2)
-                    xl = get(child_handles(i),'xlim');
-                    x = [xl(1) xl(2)];        
-                    z = ones(1,size(x,2));
-                    z = z.*zval;
-                    y = intervals(j)*ones(1,size(x,2));
-                    plot3(child_handles(i),x,y,z,'--k');
-                end
-                
-                warning('on');
-                hold(child_handles(i),'off');
-            end            
-        end    
     end
+    interval_selected = get(handles.signal_list,'Value');
+    hold(handles.cum_avg,'on');
+    sig = handles.sig;
+    if interval_selected == size(handles.sig,1)/2 + 1
+        for j = 1:size(intervals,2)
+            xl = get(child_handles(i),'ylim');
+            x = [xl(1) xl(2)];        
+            z = ones(1,size(x,2));
+            y = intervals(j)*ones(1,size(x,2));
+            plot3(handles.cum_avg,y,x,z,'--k');
+            set(handles.cum_avg,'Xtick',intervals);
+        end        
+    else    
+        if(size(intervals)>0)
+            zval = 1;        
+            for i = 1:size(child_handles,1)            
+                if(strcmp(get(child_handles(i),'Type'),'axes') && strcmp(get(child_handles(i),'Visible'),'on'))
+                    
+                    hold(child_handles(i),'on');
+                    warning('off');
+
+                    for j = 1:size(intervals,2)
+                        xl = get(child_handles(i),'xlim');
+                        x = [xl(1) xl(2)];        
+                        z = ones(1,size(x,2));
+                        z = z.*zval;
+                        y = intervals(j)*ones(1,size(x,2));
+                        plot3(child_handles(i),x,y,z,'--k');
+                    end
+                    set(child_handles(i),'Ytick',intervals);
+                    warning('on');
+                    hold(child_handles(i),'off');
+                end            
+            end    
+        end
+    end
+    
     set(handles.plot_pow,'Yticklabel',[]);
 
 function wavlet_transform_Callback(hObject, eventdata, handles)
@@ -510,7 +527,7 @@ function xyplot_Callback(hObject, eventdata, handles)
         hold(handles.cum_avg,'on');
         if size(handles.sig,1)/2 > 1
             plot(handles.cum_avg, handles.freqarr, mean(cell2mat(handles.time_avg_wpc)),'-','Linewidth',3);
-            plot(handles.cum_avg, handles.freqarr, median(cell2mat(handles.time_avg_wpc)),'-*','Linewidth',3);
+            plot(handles.cum_avg, handles.freqarr, median(cell2mat(handles.time_avg_wpc)),'--','Linewidth',3);
         else
             plot(handles.cum_avg, handles.freqarr, cell2mat(handles.time_avg_wpc),'-','Linewidth',3);
             plot(handles.cum_avg, handles.freqarr, cell2mat(handles.time_avg_wpc),'--','Linewidth',3);
@@ -642,7 +659,55 @@ else
 end
 grid(handles.plot_pow,'on');
 set(handles.plot_pow,'Fontunits','normalized','fontsize',0.035);
-      
+
+function detrend_signal_popup_Callback(hObject, eventdata, handles)
+%Detrends the signal plots the chosen one
+    cla(handles.plot_pp,'reset');
+    %preprocess_Callback(hObject, eventdata, handles);
+
+function signal_list_Callback(hObject, eventdata, handles)
+%Selecting signal and calling other necessary functions
+    signal_selected = get(handles.signal_list, 'Value');
+    
+    if any(signal_selected == size(handles.sig,1)/2+1)
+        set(handles.signal_list,'Max',size(handles.sig,1)/2);
+    else
+        if size(signal_selected,2) == 1
+            set(handles.signal_list,'Max',1);
+        else
+            set(handles.signal_list, 'Value', 1);
+            set(handles.signal_list,'Max',1);
+            drawnow;
+            xyplot_Callback(hObject, eventdata, handles);
+        end
+    end
+    
+    if any(signal_selected ~= size(handles.sig,1)/2+1) && length(signal_selected) == 1
+        
+        plot(handles.time_series_1, handles.time_axis, handles.sig(signal_selected,:));%Plotting the time_series part after calculation of appropriate limits
+        xl = csv_to_mvar(get(handles.xlim, 'String'));
+        xlim(handles.time_series_1, xl);
+        plot(handles.time_series_2, handles.time_axis, handles.sig(signal_selected+size(handles.sig,1)/2,:));%Plotting the time_series part after calculation of appropriate limits
+        xlim(handles.time_series_2, xl);        
+        xlabel(handles.time_series_2, 'Time (s)');
+        refresh_limits_Callback(hObject, eventdata, handles);%updates the values in the box
+        %cla(handles.plot_pp, 'reset');
+        %preprocess_Callback(hObject, eventdata, handles);%plots the detrended curve
+        %xlabel(handles.time_series, 'Time (s)');
+        set(handles.status, 'String', 'Select Data And Continue With Wavelet Transform');
+        if isfield(handles,'TPC')
+            xyplot_Callback(hObject, eventdata, handles);
+        end
+        intervals_Callback(hObject, eventdata, handles)
+        ylabel(handles.time_series_1,'Signal 1');
+        ylabel(handles.time_series_2,'Signal 2');
+        xlabel(handles.time_series_2,'Time (s)');
+        set(handles.time_series_1,'fontunits','normalized','fontsize',0.237,'yticklabel',[],'xticklabel',[]);
+        set(handles.time_series_2,'fontunits','normalized','fontsize',0.237,'yticklabel',[]);
+    elseif any(signal_selected == size(handles.sig,1)/2+1)
+        xyplot_Callback(hObject, eventdata, handles);
+        intervals_Callback(hObject, eventdata, handles)
+    end
 %---------------------------------------Surrogate Analysis------
 
 % --------------------------------------------------------------------
@@ -845,8 +910,12 @@ function plot_type_SelectionChangeFcn(hObject, eventdata, handles)
     data.plot_type = plot_type;
     guidata(hObject,data); 
 
+
+
 % ----------------------------------------Saving Files---------------
 function save_Callback(hObject, eventdata, handles)
+function save_csv_Callback(hObject, eventdata, handles)
+function save_mat_Callback(hObject, eventdata, handles)
 %Honestly you're just here because I don't know how to get rid of you
 
 function save_3dplot_Callback(hObject, eventdata, handles)
@@ -870,74 +939,20 @@ ax = copyobj(handles.cum_avg, Fig);
 set(ax,'Units', 'normalized', 'Position', [0.1,0.2,.85,.7]);
 set(Fig,'Units','normalized','Position', [0.2 0.2 0.5 0.5]);
 
-function save_pow_arr_Callback(hObject, eventdata, handles)
-%Saves the avg power array
-    [FileName,PathName] = uiputfile
-    save_location = strcat(PathName,FileName)
-    data = guidata(hObject);
-    pow_arr = data.pow_arr;
-    save(save_location,'pow_arr');
+function save_avg_csv_Callback(hObject, eventdata, handles)
+%time_avg_wpc
+[FileName,PathName] = uiputfile('.csv');
+save_location = strcat(PathName,FileName);
+avg_coh = cell2mat(handles.time_avg_wpc);
+csvwrite(save_location,avg_coh);
+function save_avg_mat_Callback(hObject, eventdata, handles)
+[FileName,PathName] = uiputfile('.mat','Save Power Array as');
+save_location = strcat(PathName,FileName)
+avg_coh = handles.time_avg_wpc;
+save(save_location,'avg_coh');
 
-function save_wt_Callback(hObject, eventdata, handles)
-%Saves the wavelet transform
-    [FileName,PathName] = uiputfile
-    save_location = strcat(PathName,FileName)
-    data = guidata(hObject);
-    WT = data.WT;
-    freqarr = data.freqarr;
-    save(save_location,'freqarr','-v7.3');
-    save(save_location,'WT','-v7.3');%Sometimes the compression is faulty
 
-function detrend_signal_popup_Callback(hObject, eventdata, handles)
-%Detrends the signal plots the chosen one
-    cla(handles.plot_pp,'reset');
-    %preprocess_Callback(hObject, eventdata, handles);
 
-function signal_list_Callback(hObject, eventdata, handles)
-%Selecting signal and calling other necessary functions
-    signal_selected = get(handles.signal_list, 'Value');
-    
-    if any(signal_selected == size(handles.sig,1)/2+1)
-        set(handles.signal_list,'Max',size(handles.sig,1)/2);
-    else
-        if size(signal_selected,2) == 1
-            set(handles.signal_list,'Max',1);
-        else
-            set(handles.signal_list, 'Value', 1);
-            set(handles.signal_list,'Max',1);
-            drawnow;
-            xyplot_Callback(hObject, eventdata, handles);
-        end
-    end
-    
-    if any(signal_selected ~= size(handles.sig,1)/2+1) && length(signal_selected) == 1
-        
-        plot(handles.time_series_1, handles.time_axis, handles.sig(signal_selected,:));%Plotting the time_series part after calculation of appropriate limits
-        xl = csv_to_mvar(get(handles.xlim, 'String'));
-        xlim(handles.time_series_1, xl);
-        plot(handles.time_series_2, handles.time_axis, handles.sig(signal_selected+size(handles.sig,1)/2,:));%Plotting the time_series part after calculation of appropriate limits
-        xlim(handles.time_series_2, xl);        
-        xlabel(handles.time_series_2, 'Time (s)');
-        refresh_limits_Callback(hObject, eventdata, handles);%updates the values in the box
-        %cla(handles.plot_pp, 'reset');
-        %preprocess_Callback(hObject, eventdata, handles);%plots the detrended curve
-        %xlabel(handles.time_series, 'Time (s)');
-        set(handles.status, 'String', 'Select Data And Continue With Wavelet Transform');
-        if isfield(handles,'TPC')
-            xyplot_Callback(hObject, eventdata, handles);
-        end
-        intervals_Callback(hObject, eventdata, handles)
-        ylabel(handles.time_series_1,'Signal 1');
-        ylabel(handles.time_series_2,'Signal 2');
-        xlabel(handles.time_series_2,'Time (s)');
-        set(handles.time_series_1,'fontunits','normalized','fontsize',0.237,'yticklabel',[],'xticklabel',[]);
-        set(handles.time_series_2,'fontunits','normalized','fontsize',0.237,'yticklabel',[]);
-    elseif any(signal_selected == size(handles.sig,1)/2+1)
-        xyplot_Callback(hObject, eventdata, handles);
-        intervals_Callback(hObject, eventdata, handles)
-    end
 
-function display_type_Callback(hObject, eventdata, handles)
-% Hints: contents = cellstr(get(hObject,'String')) returns display_type contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from display_type
+
 
