@@ -542,7 +542,7 @@ function xyplot_Callback(hObject, eventdata, handles)
                 ylabel(handles.cum_avg,'Average Coherence');
                 xlabel(handles.cum_avg,'Frequency (Hz)');
                 [M,I] = max(handles.time_avg_wpc{signal_selected(i),1});
-                text(handles.cum_avg,handles.freqarr(I),M,num2str(signal_selected(i)));  
+%                 text(handles.cum_avg,handles.freqarr(I),M,num2str(signal_selected(i)));  
             end
         end
         
