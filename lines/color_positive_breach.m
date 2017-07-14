@@ -36,9 +36,9 @@ while i < L
         x = [x,fliplr(x)];
         
         if flipped == 0
-            patch(h,x,y,rgb(color),'FaceAlpha',.5);
+            fill(h,x,y,rgb(color),'FaceAlpha',.5);
         else
-            patch(h,y,x,rgb(color),'FaceAlpha',.5);
+            fill(h,y,x,rgb(color),'FaceAlpha',.5);
         end
         x = [];
         y_up = [];

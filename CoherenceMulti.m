@@ -196,6 +196,7 @@ drawnow;
 function intervals_Callback(hObject, eventdata, handles)
 %Marking lines on the graphs    
     intervals = csv_to_mvar(get(handles.intervals,'String'));      
+    intervals = sort(intervals);
     %Clearing unmarked lines
     child_handles = allchild(handles.wt_pane);            
     for i = 1:size(child_handles,1)        
@@ -215,16 +216,18 @@ function intervals_Callback(hObject, eventdata, handles)
     end
     interval_selected = get(handles.signal_list,'Value');
     hold(handles.cum_avg,'on');
-    sig = handles.sig;
-    if interval_selected == size(handles.sig,1)/2 + 1
-        for j = 1:size(intervals,2)
-            xl = get(child_handles(i),'ylim');
+    if interval_selected == size(handles.sig,1) + 1
+        xl = get(child_handles(i),'ylim');
+        for j = 1:size(intervals,2)            
             x = [xl(1) xl(2)];        
             z = ones(1,size(x,2));
             y = intervals(j)*ones(1,size(x,2));
             plot3(handles.cum_avg,y,x,z,'--k');
-            set(handles.cum_avg,'Xtick',intervals);
+            xticks = get(handles.cum_avg,'xtick');
+            xticks = unique(sort([xticks intervals]));
+            set(handles.cum_avg,'xtick',xticks);            
         end        
+        set(child_handles(i),'ylim',xl);
     else    
         if(size(intervals)>0)
             zval = 1;        
@@ -233,19 +236,22 @@ function intervals_Callback(hObject, eventdata, handles)
                     
                     hold(child_handles(i),'on');
                     warning('off');
-
+                    xl = get(child_handles(i),'xlim');
                     for j = 1:size(intervals,2)
-                        xl = get(child_handles(i),'xlim');
+                        
                         x = [xl(1) xl(2)];        
                         z = ones(1,size(x,2));
                         z = z.*zval;
                         y = intervals(j)*ones(1,size(x,2));
                         plot3(child_handles(i),x,y,z,'--k');
                     end
-                    set(child_handles(i),'Ytick',intervals);
+                    yticks = get(child_handles(i),'ytick');
+                    yticks = unique(sort([yticks intervals]));
+                    set(child_handles(i),'Ytick',yticks);
                     warning('on');
                     hold(child_handles(i),'off');
                 end            
+                set(child_handles(i),'xlim',xl);
             end    
         end
     end
@@ -725,6 +731,7 @@ function csv_read_Callback(hObject, eventdata, handles)
     fs = str2double(get(handles.sampling_freq,'String'));     
     if isnan(fs)
       errordlg('Sampling frequency must be specified before importing','Parameter Error');
+      status_Callback(hObject, eventdata, handles, 'Please enter sampling frequency');
       return;
     end
     
@@ -750,7 +757,7 @@ function csv_read_Callback(hObject, eventdata, handles)
         list{i,1} = sprintf('Signal Pair %d',i);
     end
     set(handles.signal_list,'String',list);
-    list{i+1,1} = sprintf('Average Plot(All)');
+    list{i+1,1} = sprintf('Average Plot (All)');
     set(handles.signal_list,'String',list); 
     
     handles.sig = sig;   
@@ -784,6 +791,7 @@ function mat_read_Callback(hObject, eventdata, handles)
     fs = str2double(get(handles.sampling_freq,'String'));   
     if isnan(fs)
       errordlg('Sampling frequency must be specified before importing','Parameter Error');
+      status_Callback(hObject, eventdata, handles, 'Please enter sampling frequency');
       return;
     end
     
@@ -950,9 +958,6 @@ function save_avg_mat_Callback(hObject, eventdata, handles)
 save_location = strcat(PathName,FileName)
 avg_coh = handles.time_avg_wpc;
 save(save_location,'avg_coh');
-
-
-
 
 
 
